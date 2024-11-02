@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
-"""This module defines the class `Server` and the function `index_range`"""
+
+"""
+Module: 2-hypermedia_pagination
+"""
+
 import csv
 import math
-from typing import Dict, List, Tuple, Any
-
-
-def index_range(page: int, page_size: int) -> Tuple[int, int]:
-    """
-    Return a tuple of size two containing a start index and an end index
-    corresponding to the range of indexes to return in a list for those
-    particular pagination parameters
-    """
-    return (page_size * page - page_size, page_size * page)
+from typing import List
+from typing import Tuple
 
 
 class Server:
@@ -34,29 +30,68 @@ class Server:
         return self.__dataset
 
     def get_page(self, page: int = 1, page_size: int = 10) -> List[List]:
-        """Return the appropriate page of the dataset"""
+        """
+        Return a page of the dataset for pagination.
+
+        Args:
+            page (int): Page number (1-indexed).
+            page_size (int): Number of items per page.
+
+        Returns:
+            list: A list containing the rows of the page.
+        """
         assert isinstance(page, int) and page > 0
         assert isinstance(page_size, int) and page_size > 0
-        start, end = index_range(page, page_size)
-        return self.dataset()[start:end]
 
-    def get_hyper(self, page: int = 1,
-                  page_size: int = 10) -> Dict[str, Any]:
-        """Return hypermedia dictionary"""
+        start, end = index_range(page, page_size)
+        data = self.dataset()
+        if start >= len(data):
+            return []
+
+        return data[start:end]
+
+    def get_hyper(self, page: int = 1, page_size: int = 10) -> dict:
+        """
+        Return a dictionary containing hypermedia pagination information.
+
+        Args:
+            page (int): Page number (1-indexed).
+            page_size (int): Number of items per page.
+
+        Returns:
+            dict: A dictionary containing hypermedia pagination details.
+        """
         data = self.get_page(page, page_size)
-        _page_size = len(data)
-        _page = page  # if data else None
-        next_page = page + 1 if self.get_page(page + 1) else None
-        prev_page = page - 1 or None
-        dataset = []
-        if self.__dataset is not None:
-            dataset = self.__dataset
-        total_pages = math.ceil(len(dataset) / page_size)
-        return {
-            "page_size": _page_size,
-            "page": _page,
+        total_pages = int(math.ceil(len(self.dataset()) / page_size))
+
+        hyper_dict = {
+            "page_size": len(data),
+            "page": page,
             "data": data,
-            "next_page": next_page,
-            "prev_page": prev_page,
+            "next_page": page + 1 if page < total_pages else None,
+            "prev_page": page - 1 if page > 1 else None,
             "total_pages": total_pages
         }
+
+        return hyper_dict
+
+
+def index_range(page: int, page_size: int) -> Tuple[int, int]:
+    """
+    Return a tuple of the start and end indexes for pagination.
+
+    Args:
+        page (int): Page number (1-indexed).
+        page_size (int): Number of items per page.
+
+    Returns:
+        tuple: A tuple containing the start index and end index.
+    """
+    if page <= 0:
+        start = 0
+    else:
+        start = (page - 1) * page_size
+
+    end = start + page_size
+
+    return start, end
